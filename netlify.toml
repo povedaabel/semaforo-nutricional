@@ -1,0 +1,20 @@
+# Semáforo Nutricional — configuración de despliegue
+
+[build]
+  publish = "."
+
+[functions]
+  directory = "netlify/functions"
+
+# La app llama a /api/off y /api/aportar, y queda desacoplada de la ruta
+# interna de Netlify. Si mañana el backend se muda, cambia esto y no el
+# código de la aplicación.
+[[redirects]]
+  from = "/api/off"
+  to = "/.netlify/functions/off"
+  status = 200
+
+[[redirects]]
+  from = "/api/aportar"
+  to = "/.netlify/functions/aportar"
+  status = 200
