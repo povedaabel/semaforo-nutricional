@@ -1,0 +1,1202 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12181C">
+<title>Semáforo Nutricional</title>
+<style>
+  :root{
+    --papel:#EDF1F2; --tarjeta:#FFFFFF; --tinta:#12181C; --tinta-suave:#5A666E;
+    --linea:#C7D0D4; --accion:#23386B;
+    --verde:#1B7F4B; --ambar:#B06E00; --rojo:#C2331F; --gris:#8A959B;
+    --r:14px;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{background:var(--papel);color:var(--tinta);
+    font-family:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    font-size:18px;line-height:1.45;-webkit-text-size-adjust:100%}
+  .app{max-width:540px;margin:0 auto;padding:16px 16px 40px}
+  h1,h2,h3{margin:0;letter-spacing:-0.02em;line-height:1.1}
+  h2{font-size:22px;font-weight:800;margin-bottom:10px}
+  h3{font-size:17px;font-weight:700}
+  p{margin:10px 0}
+  .num{font-variant-numeric:tabular-nums}
+
+  header.top{display:flex;align-items:baseline;gap:10px;padding:6px 0 14px;border-bottom:2px solid var(--tinta)}
+  header.top .marca{font-size:20px;font-weight:800;letter-spacing:-0.03em}
+  header.top .sub{font-size:12px;color:var(--tinta-suave);text-transform:uppercase;letter-spacing:.09em}
+
+  .aviso{margin:14px 0;padding:10px 12px;border:2px dashed var(--linea);border-radius:var(--r);
+    font-size:13px;color:var(--tinta-suave)}
+  .aviso strong{color:var(--tinta)}
+
+  button{font:inherit}
+  .btn{display:block;width:100%;padding:18px;border:none;border-radius:var(--r);
+    background:var(--accion);color:#fff;font-weight:800;font-size:20px;cursor:pointer;text-align:center}
+  .btn:active{transform:translateY(1px)}
+  .btn.sec{background:var(--tarjeta);color:var(--tinta);border:2px solid var(--tinta);font-size:17px;padding:14px}
+  .btn.chica{padding:10px 14px;font-size:15px;width:auto;display:inline-block}
+  .btn:focus-visible,input:focus-visible,select:focus-visible{outline:3px solid var(--accion);outline-offset:2px}
+
+  input[type=text],select{width:100%;padding:14px;border:2px solid var(--linea);border-radius:var(--r);
+    background:var(--tarjeta);color:var(--tinta);font-size:18px}
+  label.campo{display:block;font-size:14px;color:var(--tinta-suave);margin:14px 0 6px;font-weight:600}
+
+  .tarjeta{background:var(--tarjeta);border:2px solid var(--tinta);border-radius:var(--r);padding:16px;margin:14px 0}
+  .tarjeta.plana{border:2px solid var(--linea)}
+
+  /* Firma: la regla del límite. El 100% cae en la mitad. */
+  .medida{position:relative;height:26px;background:#F3F6F7;border:2px solid var(--tinta);border-radius:6px;overflow:hidden;margin-top:6px}
+  .medida.abierta{border-style:dashed;border-color:var(--gris)}
+  .medida .relleno{height:100%;transition:width .45s cubic-bezier(.2,.8,.2,1)}
+  .medida .relleno.rayado{background-image:repeating-linear-gradient(115deg,rgba(255,255,255,.55) 0 5px,transparent 5px 10px)}
+  .medida .marca{position:absolute;left:50%;top:0;bottom:0;width:3px;background:var(--tinta);opacity:.85}
+  .medida .desborde{position:absolute;right:0;top:0;bottom:0;width:26px;border-left:2px solid var(--tinta);
+    background:repeating-linear-gradient(115deg,var(--tinta) 0 5px,#FFF 5px 10px)}
+  .escala{display:flex;justify-content:space-between;font-size:11px;color:var(--tinta-suave);margin-top:4px;letter-spacing:.04em}
+  .escala span{text-transform:uppercase}
+
+  .fila{margin:18px 0}
+  .fila .encabezado{display:flex;align-items:flex-end;justify-content:space-between;gap:10px}
+  .fila .nombre{font-size:17px;font-weight:700}
+  .fila .pct{font-size:38px;font-weight:800;letter-spacing:-0.04em;line-height:1;white-space:nowrap}
+  .fila .pct.corto{font-size:19px;font-weight:700;letter-spacing:0}
+  .fila .detalle{font-size:13px;color:var(--tinta-suave);margin-top:8px}
+  .etiqueta{display:inline-block;font-size:11px;font-weight:800;text-transform:uppercase;letter-spacing:.07em;
+    padding:2px 7px;border-radius:999px;border:1.5px solid var(--linea);color:var(--tinta-suave);margin-left:6px;vertical-align:3px}
+
+  .v{color:var(--verde)} .a{color:var(--ambar)} .r{color:var(--rojo)} .g{color:var(--gris)}
+  .bg-v{background:var(--verde)} .bg-a{background:var(--ambar)} .bg-r{background:var(--rojo)} .bg-g{background:var(--gris)}
+
+  .meta{font-size:13px;color:var(--tinta-suave);border-top:1px solid var(--linea);padding-top:10px;margin-top:16px}
+  ul.limpia{list-style:none;padding:0;margin:0}
+  ul.limpia li{border-top:1px solid var(--linea);padding:12px 0}
+  ul.limpia li:first-child{border-top:none}
+
+  .comp{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;background:none;border:none;padding:0;text-align:left;cursor:pointer;color:inherit}
+  .comp .cifras{display:flex;gap:10px;font-size:13px;font-weight:700;white-space:nowrap}
+  .comp .cifras span{min-width:46px;text-align:right}
+  .comp .nom{font-size:16px;font-weight:600;line-height:1.25}
+  .comp .mm{font-size:12px;color:var(--tinta-suave)}
+
+  #camara{width:100%;border-radius:var(--r);background:#000;display:block;aspect-ratio:4/3;object-fit:cover}
+  #guia{position:absolute;left:5%;right:5%;top:28%;height:44%;border:3px solid #fff;border-radius:8px;
+    box-shadow:0 0 0 9999px rgba(0,0,0,.28);pointer-events:none}
+  .oculto{display:none !important}
+  .cargando{font-size:15px;color:var(--tinta-suave)}
+  .pie{font-size:12px;color:var(--tinta-suave);margin-top:26px;border-top:2px solid var(--tinta);padding-top:12px}
+  .pie a{color:var(--accion)}
+  @media (prefers-reduced-motion:reduce){*{transition:none !important}}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <header class="top">
+    <div class="marca">Semáforo Nutricional</div>
+    <div class="sub">comparar, no juzgar</div>
+  </header>
+
+  <section id="p-inicio">
+    <div class="aviso">
+      <strong>Prototipo.</strong> Motor <span class="num" id="ver-motor"></span>.
+      Indicador propio: <strong>no es un sello oficial</strong> y no reemplaza el etiquetado regulatorio.
+    </div>
+
+    <button class="btn" id="b-escanear">Escanear producto</button>
+
+    <div id="aviso-lectura" class="tarjeta oculto"></div>
+
+    <label class="campo" for="codigo">O ingresá el código de barras</label>
+    <input type="text" id="codigo" inputmode="numeric" placeholder="7790000000000" autocomplete="off">
+    <div style="height:10px"></div>
+    <button class="btn sec" id="b-buscar">Buscar</button>
+
+    <div style="height:22px"></div>
+    <button class="btn sec" id="b-demo">Ver ejemplo con datos de prueba</button>
+
+    <p class="pie">
+      Datos de productos: <a href="https://world.openfoodfacts.org" target="_blank" rel="noopener">Open Food Facts</a>,
+      bajo licencia ODbL. Son datos colaborativos: pueden estar incompletos o desactualizados.
+      Semáforo Nutricional no los verifica.
+      <br><br>En producción, las consultas deben pasar por un backend propio que identifique la aplicación
+      ante Open Food Facts. Este prototipo consulta directo y sólo sirve para probar.
+    </p>
+  </section>
+
+  <section id="p-escaner" class="oculto">
+    <h2>Apuntá al código de barras</h2>
+    <div style="position:relative">
+      <video id="camara" playsinline muted></video>
+      <div id="guia" class="oculto"></div>
+    </div>
+    <p class="cargando" id="estado-camara">Pidiendo permiso de cámara…</p>
+    <p style="font-size:14px;color:var(--tinta-suave);margin-top:0">Encuadrá el código dentro del recuadro,
+    <strong>con los márgenes blancos de los costados incluidos</strong>. Si lo pegás demasiado a la cámara
+    y el borde blanco queda afuera, no se puede leer. Si el envase es curvo, apuntá derecho al centro.</p>
+    <button class="btn sec oculto" id="b-linterna">Prender linterna</button>
+    <div style="height:10px"></div>
+    <button class="btn sec" id="b-cancelar-camara">Cancelar</button>
+  </section>
+
+  <section id="p-panel" class="oculto">
+    <button class="btn sec chica" data-volver="inicio">← Volver</button>
+    <div id="panel-contenido"></div>
+  </section>
+
+  <section id="p-comparar" class="oculto">
+    <button class="btn sec chica" id="b-volver-panel">← Volver al panel</button>
+    <div id="comparar-contenido"></div>
+  </section>
+
+  <section id="p-aportar" class="oculto">
+    <button class="btn sec chica" data-volver="inicio">← Volver</button>
+    <div id="aportar-contenido"></div>
+  </section>
+
+</div>
+
+<script>
+/* ═══════════════════════════════════════════════════════════════════════
+   MOTOR DE REGLAS — versionado por país y por etapa normativa
+   ───────────────────────────────────────────────────────────────────────
+   Fuente: Ley 27.642, Decreto 151/2022, Disp. ANMAT 11362/2024
+   y Manual de Aplicación del Rotulado Nutricional Frontal.
+   Resultados de la Fase 0 (agosto 2026).
+
+   Cambios respecto de v0.1:
+   · Etapa 2 confirmada como vigente; Etapa 1 se conserva como histórico.
+   · Sodio: lógica OR (1 mg/kcal O 300 mg/100 g) + 40 mg/100 ml en
+     bebidas sin aporte energético.
+   · Calorías: no es sello autónomo, requiere otro exceso.
+   · Grasas trans: NO es sello en Argentina. Se muestra como dato, no
+     como indicador.
+   · Azúcares: el criterio usa AÑADIDOS. Los totales nunca se hacen
+     pasar por añadidos.
+   ═══════════════════════════════════════════════════════════════════════ */
+
+const MOTORES = {
+  AR_27642_ETAPA2: {
+    id:"AR_27642_ETAPA2", version:"1.0", pais:"AR", vigente:true,
+    etiqueta:"Argentina · Ley 27.642 · Segunda Etapa",
+    azucares_pct_energia: 10,
+    grasas_totales_pct_energia: 30,
+    saturadas_pct_energia: 10,
+    sodio_mg_por_kcal: 1,
+    sodio_mg_por_100: 300,
+    sodio_bebida_sin_energia_mg_100ml: 40,
+    kcal_solido_100g: 275,
+    kcal_liquido_100ml: 25,
+    kcal_requiere_otro_exceso: true,
+    trans_es_sello: false,
+    // Convención del proyecto, NO normativa: el corte rojo (100%) sí lo es.
+    tramo_verde: 75
+  },
+  AR_27642_ETAPA1: {
+    id:"AR_27642_ETAPA1", version:"1.0", pais:"AR", vigente:false,
+    etiqueta:"Argentina · Ley 27.642 · Primera Etapa (histórico)",
+    azucares_pct_energia: 20,
+    grasas_totales_pct_energia: 35,
+    saturadas_pct_energia: 12,
+    sodio_mg_por_kcal: 5,
+    sodio_mg_por_100: 600,
+    sodio_bebida_sin_energia_mg_100ml: null,
+    kcal_solido_100g: 300,
+    kcal_liquido_100ml: 50,
+    kcal_requiere_otro_exceso: true,
+    trans_es_sello: false,
+    tramo_verde: 75
+  }
+};
+let MOTOR = MOTORES.AR_27642_ETAPA2;
+document.getElementById("ver-motor").textContent = MOTOR.etiqueta;
+
+/* ── Resultado de cada indicador ──────────────────────────────────────
+   estado:
+     "medido"          hay dato declarado del nutriente que pide la norma
+     "techo"           sólo tenemos una cota superior (azúcares totales)
+     "sin-dato"        no alcanza para calcular
+   Nunca se convierte una estimación en un dato declarado.
+   ──────────────────────────────────────────────────────────────────── */
+
+function color(pct){
+  if (pct < MOTOR.tramo_verde) return "v";
+  if (pct < 100) return "a";
+  return "r";
+}
+
+/* ── Coherencia de los datos ───────────────────────────────────────
+   Open Food Facts es colaborativo: hay fichas con campos en cero o con
+   la energía de otra porción. Antes de pintar un color conviene
+   preguntarse si los números se contradicen entre sí. */
+function coherencia(n){
+  const problemas = [];
+  if (n.azucares_totales !== null && n.carbos !== null && n.azucares_totales > n.carbos + 0.5){
+    problemas.push("Declara más azúcares que carbohidratos totales, y el azúcar es un carbohidrato.");
+  }
+  if (n.saturadas !== null && n.grasas !== null && n.saturadas > n.grasas + 0.5){
+    problemas.push("Declara más grasas saturadas que grasas totales.");
+  }
+  if (n.kcal && n.carbos !== null && n.grasas !== null && n.proteinas !== null){
+    const porMacros = n.carbos*4 + n.grasas*9 + n.proteinas*4;
+    if (n.kcal > porMacros*1.35 + 25){
+      problemas.push("Las calorías declaradas (" + Math.round(n.kcal) + ") son bastante más de las que explican sus nutrientes (unas " + Math.round(porMacros) + "). Falta algún dato.");
+    }
+    if (porMacros > n.kcal*1.35 + 25){
+      problemas.push("Sus nutrientes suman más energía (unas " + Math.round(porMacros) + " kcal) que las calorías declaradas (" + Math.round(n.kcal) + ").");
+    }
+  }
+  return problemas;
+}
+
+function evaluar(n){
+  const filas = [];
+  const kcal = n.kcal;
+
+  /* AZÚCARES — el criterio argentino usa azúcares AÑADIDOS. */
+  (function(){
+    const base = { id:"azucares", nombre:"Azúcares añadidos", unidad:"g",
+      nota:"Límite: "+MOTOR.azucares_pct_energia+"% de la energía, medido sobre azúcares añadidos. Open Food Facts casi nunca informa azúcares añadidos: normalmente sólo trae azúcares totales, que incluyen los propios del alimento." };
+    if (!kcal){ filas.push({...base, estado:"sin-dato", motivo:"Falta el valor energético."}); return; }
+    const limite = (MOTOR.azucares_pct_energia/100 * kcal) / 4;
+
+    /* Un cero declarado en azúcares añadidos, con azúcares totales por
+       encima, casi siempre es un campo que quedó en cero por descuido.
+       Pasó con una Coca-Cola: añadidos 0, totales 7,5 → habría salido
+       0% en verde. Un cero falso en verde es peor que no mostrar nada.
+       Sólo confiamos en el cero cuando tampoco hay azúcares totales. */
+    const ceroSospechoso = n.azucares_anadidos === 0 && n.azucares_totales > 0.5;
+
+    if (n.azucares_anadidos !== null && !ceroSospechoso){
+      const pct = n.azucares_anadidos/limite*100;
+      if (pct > 1000){
+        filas.push({...base, estado:"inconsistente", valor:n.azucares_anadidos, limite, pct,
+          motivo:"El azúcar no puede aportar más del 100% de la energía, así que este porcentaje es imposible. Los datos cargados no cierran."});
+        return;
+      }
+      filas.push({...base, estado:"medido", origen:"declarado", confianza:"alta",
+        valor:n.azucares_anadidos, limite, pct, color:color(pct)});
+      return;
+    }
+    if (n.azucares_totales !== null){
+      const pct = n.azucares_totales/limite*100;   // cota superior
+      if (pct > 1000){
+        filas.push({...base, estado:"inconsistente", valor:n.azucares_totales, limite, pct,
+          motivo:"El azúcar no puede aportar más del 100% de la energía. Las calorías cargadas para este producto no se condicen con su azúcar."});
+        return;
+      }
+      const concluyente = pct < 100;
+      filas.push({...base, estado:"techo", origen:"cota_superior", confianza:"media",
+        valor:n.azucares_totales, limite, pct,
+        color: concluyente ? color(pct) : "g", concluyente,
+        motivo: concluyente
+          ? "Aunque todos los azúcares fueran añadidos, quedaría por debajo del límite."
+          : (ceroSospechoso
+              ? "La base declara 0 g de azúcares añadidos, pero informa " + n.azucares_totales.toFixed(1).replace(".",",") + " g de azúcares totales. Ese cero no es confiable, así que mostramos la cota: no alcanza para determinarlo."
+              : "Con azúcares totales llega a "+Math.round(pct)+"%, pero el criterio mide sólo los añadidos. No alcanza para determinarlo.")});
+      return;
+    }
+    filas.push({...base, estado:"sin-dato", motivo:"No hay dato de azúcares."});
+  })();
+
+  /* SODIO — lógica OR. El porcentaje se calcula sobre el umbral más exigente,
+     que es matemáticamente equivalente a evaluar las dos condiciones. */
+  (function(){
+    const base = { id:"sodio", nombre:"Sodio", unidad:"mg",
+      nota:"Hay exceso si el producto supera "+MOTOR.sodio_mg_por_kcal+" mg por kcal O "+MOTOR.sodio_mg_por_100+" mg cada 100 g/ml. Son dos condiciones independientes, no una con tope."
+        + (MOTOR.sodio_bebida_sin_energia_mg_100ml ? " En bebidas sin aporte energético el límite es "+MOTOR.sodio_bebida_sin_energia_mg_100ml+" mg cada 100 ml." : "") };
+    if (n.sodio_mg === null){ filas.push({...base, estado:"sin-dato", motivo:"No hay dato de sodio ni de sal."}); return; }
+    let limite, regla;
+    if (n.liquido && !kcal && MOTOR.sodio_bebida_sin_energia_mg_100ml){
+      limite = MOTOR.sodio_bebida_sin_energia_mg_100ml; regla = "bebida sin aporte energético";
+    } else if (!kcal){
+      limite = MOTOR.sodio_mg_por_100; regla = "criterio absoluto";
+    } else {
+      const porEnergia = kcal * MOTOR.sodio_mg_por_kcal;
+      limite = Math.min(porEnergia, MOTOR.sodio_mg_por_100);
+      regla = porEnergia <= MOTOR.sodio_mg_por_100 ? "por energía" : "criterio absoluto";
+    }
+    const pct = n.sodio_mg/limite*100;
+    filas.push({...base, estado:"medido", origen:n.sodio_declarado?"declarado":"derivado_de_sal",
+      confianza:n.sodio_declarado?"alta":"media",
+      valor:n.sodio_mg, limite, pct, color:color(pct), regla});
+  })();
+
+  /* GRASAS SATURADAS */
+  filas.push(porEnergia(n, "saturadas", "Grasas saturadas", n.saturadas, MOTOR.saturadas_pct_energia, 9));
+  /* GRASAS TOTALES */
+  filas.push(porEnergia(n, "totales", "Grasas totales", n.grasas, MOTOR.grasas_totales_pct_energia, 9));
+
+  /* CALORÍAS — no es sello autónomo. */
+  (function(){
+    const base = { id:"calorias", nombre:"Calorías", unidad:"kcal",
+      nota:"Límite: "+MOTOR.kcal_solido_100g+" kcal/100 g en sólidos y "+MOTOR.kcal_liquido_100ml+" kcal/100 ml en bebidas. En la norma el sello de calorías sólo corresponde si además hay exceso de azúcares, grasas totales o saturadas." };
+    if (!kcal){ filas.push({...base, estado:"sin-dato", motivo:"No hay valor energético."}); return; }
+    const limite = n.liquido ? MOTOR.kcal_liquido_100ml : MOTOR.kcal_solido_100g;
+    const pct = kcal/limite*100;
+    const otroExceso = filas.some(f => ["azucares","saturadas","totales"].includes(f.id)
+      && f.estado==="medido" && f.pct >= 100);
+    let col = color(pct), condicion = null;
+    if (pct >= 100 && MOTOR.kcal_requiere_otro_exceso && !otroExceso){
+      col = "a";
+      condicion = "Supera el límite, pero por sí solo no genera sello: la norma exige además un exceso de azúcares o grasas.";
+    }
+    filas.push({...base, estado:"medido", origen:"declarado", confianza:"alta",
+      valor:kcal, limite, pct, color:col, condicion});
+  })();
+
+  return filas;
+}
+
+function porEnergia(n, id, nombre, valor, pctLimite, kcalPorGramo){
+  const base = { id, nombre, unidad:"g",
+    nota:"Límite: "+pctLimite+"% de la energía total." };
+  if (!n.kcal) return {...base, estado:"sin-dato", motivo:"Falta el valor energético."};
+  if (valor === null) return {...base, estado:"sin-dato", motivo:"No hay dato de "+nombre.toLowerCase()+"."};
+  const limite = (pctLimite/100 * n.kcal) / kcalPorGramo;
+  const pct = valor/limite*100;
+  /* Techo matemático: ese nutriente no puede aportar más del 100% de la
+     energía del producto, así que el porcentaje no puede pasar de
+     100/pctLimite. Si lo pasa, los datos cargados no cierran. */
+  const maximo = 100 / pctLimite * 100;
+  if (pct > maximo){
+    return {...base, estado:"inconsistente", valor, limite, pct,
+      motivo:"Este porcentaje es imposible: el nutriente no puede aportar más energía que la que declara el producto. Los datos cargados no cierran."};
+  }
+  return {...base, estado:"medido", origen:"declarado", confianza:"alta", valor, limite, pct, color:color(pct)};
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   DATOS
+   ═══════════════════════════════════════════════════════════════════════ */
+const API_BASE = "https://world.openfoodfacts.org";   // reserva: consulta directa
+const PROXY = "/api/off";                             // nuestro backend
+let hayProxy = true;   // se apaga solo si la función no está desplegada
+
+/* Open Food Facts responde HTTP 404 cuando el producto no está cargado.
+   Eso NO es una falla de red: hay que distinguirlo o le mentimos al usuario. */
+async function traer(url, ms=9000){
+  const ctrl = new AbortController();
+  const t = setTimeout(()=>ctrl.abort(), ms);
+  try{
+    const r = await fetch(url, { signal:ctrl.signal, headers:{ "Accept":"application/json" } });
+    if (r.status === 404) return { status:0, __noExiste:true };
+    if (r.status === 429) throw new Error("http 429");
+    if (!r.ok) throw new Error("http "+r.status);
+    return await r.json();
+  } finally { clearTimeout(t); }
+}
+
+/* Pide por el proxy; si no existe (app abierta como archivo suelto, o
+   función no desplegada) cae al modo directo sin romper nada. */
+async function pedir(params, urlDirecta, ms=9000){
+  if (hayProxy){
+    const ctrl = new AbortController();
+    const t = setTimeout(()=>ctrl.abort(), ms);
+    try{
+      const r = await fetch(`${PROXY}?${new URLSearchParams(params)}`, { signal:ctrl.signal });
+      if (r.status === 404 || r.status === 405){
+        hayProxy = false;              // no está desplegada: pasamos a directo
+      } else {
+        if (r.status === 429) throw new Error("http 429");
+        if (!r.ok) throw new Error("http "+r.status);
+        return await r.json();
+      }
+    }catch(e){
+      if (String(e.message).includes("429")) throw e;
+      hayProxy = false;
+    }finally{ clearTimeout(t); }
+  }
+  return traer(urlDirecta, ms);
+}
+
+const DEMO = [
+  { code:"000000000001", product_name:"Galletitas saladas (prueba)", brands:"Datos ficticios",
+    categories_tags:["en:snacks"], demo:true,
+    nutriments:{ "energy-kcal_100g":470, sugars_100g:6, "saturated-fat_100g":9, fat_100g:20, sodium_100g:0.87 } },
+  { code:"000000000002", product_name:"Galletitas saladas integrales (prueba)", brands:"Datos ficticios",
+    categories_tags:["en:snacks"], demo:true,
+    nutriments:{ "energy-kcal_100g":430, sugars_100g:4, "added-sugars_100g":1.5, "saturated-fat_100g":5, fat_100g:16, sodium_100g:0.41 } },
+  { code:"000000000003", product_name:"Tostadas de arroz (prueba)", brands:"Datos ficticios",
+    categories_tags:["en:snacks"], demo:true,
+    nutriments:{ "energy-kcal_100g":385, sugars_100g:1, "saturated-fat_100g":1.2, fat_100g:3, sodium_100g:0.22 } },
+  { code:"000000000004", product_name:"Bebida cola (prueba)", brands:"Datos ficticios",
+    categories_tags:["en:beverages"], demo:true,
+    nutriments:{ "energy-kcal_100g":42, sugars_100g:10.6, "added-sugars_100g":10.6, "saturated-fat_100g":0, fat_100g:0, sodium_100g:0.005 } },
+  { code:"000000000005", product_name:"Agua saborizada sin calorías (prueba)", brands:"Datos ficticios",
+    categories_tags:["en:beverages"], demo:true,
+    nutriments:{ "energy-kcal_100g":0, sugars_100g:0, "saturated-fat_100g":0, fat_100g:0, sodium_100g:0.055 } }
+];
+
+function normalizar(p){
+  const n = p.nutriments || {};
+  const num = v => (typeof v === "number" && isFinite(v)) ? v : null;
+  const cats = p.categories_tags || [];
+  // OJO: OFF tiene la categoría paraguas "en:plant-based-foods-and-beverages",
+  // que arrastraba pan, galletitas y fideos al umbral de bebidas. Se excluye
+  // cualquier categoría que mezcle "foods" con "beverages".
+  const liquido = cats.some(c => {
+    const t = c.toLowerCase();
+    if (t.includes("food")) return false;
+    return /(beverages|drinks|waters|sodas|juices|bebidas|boissons|milks|smoothies|iced-teas|energy-drinks)$/.test(t);
+  });
+  const sodioDeclarado = num(n.sodium_100g) !== null;
+  return {
+    codigo:p.code,
+    nombre:p.product_name || p.product_name_es || "Sin nombre",
+    marca:p.brands || "",
+    categorias:cats,
+    demo:!!p.demo,
+    tiendas:(p.stores||"").trim(),
+    actualizado:p.last_modified_t ? new Date(p.last_modified_t*1000) : null,
+    liquidoInferido:liquido,
+    nutri:{
+      kcal:num(n["energy-kcal_100g"]),
+      azucares_totales:num(n.sugars_100g),
+      azucares_anadidos:num(n["added-sugars_100g"]),
+      saturadas:num(n["saturated-fat_100g"]),
+      grasas:num(n.fat_100g),
+      carbos:num(n.carbohydrates_100g),
+      proteinas:num(n.proteins_100g),
+      trans:num(n["trans-fat_100g"]),
+      sodio_mg: sodioDeclarado ? n.sodium_100g*1000
+                : (num(n.salt_100g) !== null ? n.salt_100g*400 : null),
+      sodio_declarado:sodioDeclarado,
+      liquido
+    }
+  };
+}
+
+const CAMPOS = "code,product_name,product_name_es,brands,categories_tags,nutriments,stores,countries_tags,last_modified_t";
+// nutriments trae carbohidratos y proteínas: se usan para el control de coherencia.
+const PAIS = "argentina";   // la comparación sólo sirve si son productos que se consiguen acá
+
+/* Un código de barras lleva un dígito verificador: el último se calcula
+   a partir de los anteriores. Sirve para descartar basura antes de
+   molestar a nadie. No detecta todas las malas lecturas —una lectura
+   errónea puede dar un número igualmente válido— pero filtra mucho. */
+function digitoValido(codigo){
+  if (!/^\d{8}$|^\d{12,14}$/.test(codigo)) return false;
+  const d = codigo.split("").map(Number);
+  const control = d.pop();
+  let suma = 0;
+  d.reverse().forEach((n, i) => { suma += n * (i % 2 === 0 ? 3 : 1); });
+  return ((10 - (suma % 10)) % 10) === control;
+}
+
+/* Separa el número en grupos para que sea posible compararlo dígito por
+   dígito con el envase sin perder la cuenta. */
+function agrupar(codigo){
+  return codigo.replace(/(\d{1})(\d{6})(\d{6})$/, "$1 $2 $3");
+}
+
+/* Un código de 12 dígitos es UPC-A. Open Food Facts lo guarda como EAN-13
+   con un cero adelante. Sin esta normalización, un producto que existe
+   aparece como inexistente. */
+function variantes(codigo){
+  const v = [codigo];
+  if (codigo.length === 12) v.push("0"+codigo);
+  if (codigo.length === 13 && codigo[0] === "0") v.push(codigo.slice(1));
+  if (codigo.length < 13) v.push(codigo.padStart(13,"0"));
+  return [...new Set(v)];
+}
+
+async function buscarProducto(codigo){
+  const demo = DEMO.find(d => d.code === codigo);
+  if (demo) return { ok:true, producto:normalizar(demo) };
+  let limite = false, fallo = false;
+  for (const c of variantes(codigo)){
+    try{
+      const d = await pedir({tipo:"producto", codigo:c},
+                            `${API_BASE}/api/v2/product/${encodeURIComponent(c)}?fields=${CAMPOS}`);
+      if (d.status === 1 && d.product) return { ok:true, producto:normalizar(d.product) };
+    }catch(e){
+      if (String(e.message).includes("429")) limite = true; else fallo = true;
+    }
+  }
+  if (limite) return { ok:false, motivo:"limite" };
+  if (fallo)  return { ok:false, motivo:"sin-conexion" };
+  return { ok:false, motivo:"no-existe" };
+}
+
+async function buscarSimilares(prod){
+  if (prod.demo) return DEMO.filter(d => d.code !== prod.codigo).map(normalizar);
+  const cat = (prod.categorias||[]).slice(-1)[0];
+  if (!cat) return [];
+  const directa = `${API_BASE}/api/v2/search?categories_tags=${encodeURIComponent(cat)}`
+                + `&countries_tags_en=${PAIS}&fields=${CAMPOS}&page_size=24`;
+  try{
+    const d = await pedir({tipo:"similares", categoria:cat, pais:PAIS}, directa, 12000);
+    return (d.products||[]).map(normalizar).filter(p => p.codigo !== prod.codigo);
+  }catch(e){
+    return String(e.message).includes("429") ? "limite" : null;
+  }
+}
+
+/* ═══════════════════════════════════════════════════════════════════════
+   INTERFAZ
+   ═══════════════════════════════════════════════════════════════════════ */
+const $ = s => document.querySelector(s);
+const pantallas = ["inicio","escaner","panel","comparar","aportar"];
+let actual = null;
+
+function mostrar(nombre){
+  pantallas.forEach(p => $("#p-"+p).classList.toggle("oculto", p !== nombre));
+  window.scrollTo(0,0);
+}
+
+function coma(v, dec){ return v.toFixed(dec).replace(".",","); }
+
+function barra(f){
+  const ancho = Math.min(f.pct/2, 100);
+  const abierta = f.estado === "techo" && !f.concluyente;
+  return `<div class="medida${abierta?" abierta":""}">
+      <div class="relleno bg-${f.color}${f.estado==="techo"?" rayado":""}" style="width:${ancho}%"></div>
+      <div class="marca"></div>
+      ${f.pct > 200 ? '<div class="desborde"></div>' : ''}
+    </div>
+    <div class="escala"><span>0</span><span>límite</span><span>2× el límite</span></div>`;
+}
+
+function veces(pct){
+  if (pct < 100) return "por debajo del límite";
+  return coma(pct/100,1)+"× el límite";
+}
+
+function filaNutriente(f, unidadBase){
+  if (f.estado === "inconsistente"){
+    return `<div class="fila">
+      <div class="encabezado"><div class="nombre">${f.nombre}</div>
+      <div class="pct corto g">Dato inconsistente</div></div>
+      <div class="detalle">${f.motivo}</div></div>`;
+  }
+  if (f.estado === "sin-dato"){
+    return `<div class="fila">
+      <div class="encabezado"><div class="nombre">${f.nombre}</div>
+      <div class="pct corto g">No se puede calcular</div></div>
+      <div class="detalle">${f.motivo} No se completa por estimación.</div></div>`;
+  }
+  const cifra = f.estado === "techo"
+    ? `${f.concluyente ? "≤ " : ""}${Math.round(f.pct)}%`
+    : `${Math.round(f.pct)}%`;
+  const etiqueta = f.estado === "techo"
+    ? `<span class="etiqueta">${f.concluyente ? "cota máxima" : "indeterminado"}</span>` : "";
+  const detalleValor = `${coma(f.valor, (f.unidad==="mg"||f.unidad==="kcal")?0:1)} ${f.unidad} cada 100 ${unidadBase}
+      · límite ${coma(f.limite,(f.unidad==="mg"||f.unidad==="kcal")?0:1)} ${f.unidad}`;
+  const extra = f.motivo ? `<br>${f.motivo}` : (f.condicion ? `<br>${f.condicion}` : `· ${veces(f.pct)}`);
+  return `<div class="fila">
+    <div class="encabezado">
+      <div class="nombre">${f.nombre}${etiqueta}</div>
+      <div class="pct num ${f.color}${f.estado==="techo"&&!f.concluyente?" corto":""}">${f.estado==="techo"&&!f.concluyente?"Indeterminado":cifra}</div>
+    </div>
+    ${barra(f)}
+    <div class="detalle num">${detalleValor}${extra}</div>
+  </div>`;
+}
+
+function pintarPanel(p){
+  actual = p;
+  const filas = evaluar(p.nutri);
+  const problemas = coherencia(p.nutri);
+  const ub = p.nutri.liquido ? "ml" : "g";
+  const fuente = p.demo
+    ? "Datos de prueba, ficticios. No corresponden a ningún producto real."
+    : `Fuente: Open Food Facts (ODbL), consultado ahora${p.actualizado?`, actualizado allí el ${p.actualizado.toLocaleDateString("es-AR")}`:""}. Dato colaborativo, no verificado por Semáforo Nutricional.`;
+  const trans = p.nutri.trans !== null
+    ? `<div class="meta">Grasas trans: ${coma(p.nutri.trans,1)} g cada 100 ${ub}. Se muestra como información: no forma parte de los sellos del etiquetado argentino.</div>` : "";
+
+  $("#panel-contenido").innerHTML = `
+    <div class="tarjeta">
+      <h2>${p.nombre}</h2>
+      ${p.marca?`<div style="color:var(--tinta-suave);font-size:15px;margin-top:-4px">${p.marca}</div>`:""}
+      <div class="num" style="font-size:12px;color:var(--tinta-suave);margin-top:6px">${p.codigo}</div>
+      <div style="height:6px"></div>
+      ${problemas.length ? `<div class="tarjeta plana" style="border-color:var(--ambar)">
+        <h3 class="a">Los datos de este producto no cierran</h3>
+        ${problemas.map(x=>`<p style="font-size:14px;margin:6px 0">${x}</p>`).join("")}
+        <p style="font-size:14px;margin-bottom:0">Los porcentajes de abajo pueden estar equivocados.
+        Si tenés el envase en la mano, lo que dice la etiqueta manda.</p></div>` : ""}
+      ${filas.map(f=>filaNutriente(f, ub)).join("")}
+      ${(() => {
+        const faltan = filas.filter(f => f.estado === "sin-dato").length;
+        if (!faltan || p.demo) return "";
+        const todos = faltan === filas.length;
+        return `<div class="tarjeta plana" style="border-color:var(--tinta)">
+          <h3>${todos ? "Este producto está cargado pero sin datos" : "Faltan algunos datos"}</h3>
+          <p style="font-size:15px">${todos
+            ? "La ficha existe en la base, con su nombre y su marca, pero nadie cargó todavía la información nutricional. Por eso no podemos calcular nada."
+            : "La ficha está incompleta: " + faltan + " de " + filas.length + " indicadores no se pueden calcular."}
+          Si tenés el envase en la mano, con las fotos de la etiqueta ayudás a completarlo.</p>
+          <button class="btn" id="b-completar">Aportar fotos de la etiqueta</button>
+        </div>`;
+      })()}
+      ${trans}
+      ${p.tiendas ? `<div class="meta"><strong>Dónde lo vieron:</strong> ${p.tiendas}.
+        Lo cargó alguien de la comunidad al escanearlo. No es un dato de stock ni de precio:
+        puede estar viejo o ser de otra sucursal.</div>` : ""}
+      <div class="meta">
+        Porcentaje del límite de referencia, cada 100 ${ub}. Motor <strong>${MOTOR.id}</strong> v${MOTOR.version} — ${MOTOR.etiqueta}.
+        <br><br>Indicador propio. <strong>No es un sello oficial</strong> ni reemplaza el etiquetado regulatorio.
+        <br><br>${fuente}
+      </div>
+      <label class="campo" for="tipo">Este producto es</label>
+      <select id="tipo">
+        <option value="solido" ${!p.nutri.liquido?"selected":""}>Sólido (límite por 100 g)</option>
+        <option value="liquido" ${p.nutri.liquido?"selected":""}>Bebida (límite por 100 ml)</option>
+      </select>
+      <div class="meta" style="border:none;padding-top:6px">Lo inferimos por la categoría y puede fallar. Cambia el límite de calorías y sodio.</div>
+    </div>
+
+    <button class="btn" id="b-comparar">Comparar con productos similares</button>
+    <div style="height:10px"></div>
+    <button class="btn sec" id="b-porque">¿Cómo se calcula esto?</button>
+    <div id="porque" class="oculto tarjeta plana">
+      ${filas.map(f=>`<p style="font-size:14px;margin:8px 0"><strong>${f.nombre}.</strong> ${f.nota}${f.origen==="derivado_de_sal"?" Acá el sodio se derivó del valor de sal declarado.":""}</p>`).join("")}
+      <p style="font-size:14px"><strong>Colores.</strong> El corte rojo en 100% es el umbral normativo de exceso.
+      Los tramos verde (&lt;${MOTOR.tramo_verde}%) y ámbar son una convención de este proyecto, no de la norma.</p>
+      <p style="font-size:14px"><strong>Barras rayadas.</strong> Marcan un valor que no es el que pide la norma sino una cota superior.</p>
+    </div>`;
+
+  $("#b-comparar").onclick = irAComparar;
+  const bc = document.getElementById("b-completar");
+  if (bc) bc.onclick = () => pintarAportar(p.codigo, "sin-datos");
+  $("#b-porque").onclick = () => $("#porque").classList.toggle("oculto");
+  $("#tipo").onchange = e => { actual.nutri.liquido = (e.target.value === "liquido"); pintarPanel(actual); };
+  mostrar("panel");
+}
+
+/* ── Comparación ──────────────────────────────────────────────────── */
+let similares = null;
+const CRITERIOS = [
+  { id:"relevancia", texto:"Relevancia (sin ordenar)" },
+  { id:"sodio", texto:"Menor sodio" },
+  { id:"azucares", texto:"Menor azúcar" },
+  { id:"saturadas", texto:"Menos grasas saturadas" },
+  { id:"calorias", texto:"Menos calorías" }
+];
+
+async function irAComparar(){
+  mostrar("comparar");
+  $("#comparar-contenido").innerHTML = `<p class="cargando">Buscando productos de la misma categoría…</p>`;
+  const lista = await buscarSimilares(actual);
+  if (lista === "limite"){
+    $("#comparar-contenido").innerHTML = `<div class="tarjeta plana"><h3>Hay que esperar un minuto</h3>
+      <p style="font-size:15px">La base limita cuántas búsquedas se pueden hacer por minuto y llegamos al tope.
+      Esperá un momento y volvé a intentar. El panel del producto sigue disponible.</p></div>`;
+    return;
+  }
+  if (lista === null){
+    $("#comparar-contenido").innerHTML = `<div class="tarjeta plana"><h3>No se pudo consultar la base ahora</h3>
+      <p style="font-size:15px">Revisá la conexión y volvé a intentar. El panel del producto sigue disponible.</p></div>`;
+    return;
+  }
+  if (lista.length === 0){
+    $("#comparar-contenido").innerHTML = `<div class="tarjeta plana"><h3>Todavía no hay productos comparables</h3>
+      <p style="font-size:15px">Este producto no tiene categoría cargada, o no hay otros de la misma categoría en la base.</p></div>`;
+    return;
+  }
+  similares = [actual, ...lista];
+  pintarComparacion("relevancia");
+}
+
+function pintarComparacion(criterio){
+  const conEval = similares.map(p => ({ p, filas:evaluar(p.nutri) }));
+  const comparable = f => f && (f.estado === "medido" || (f.estado === "techo" && f.concluyente));
+
+  let orden = conEval;
+  if (criterio !== "relevancia"){
+    orden = [...conEval].sort((a,b)=>{
+      const va = a.filas.find(f=>f.id===criterio), vb = b.filas.find(f=>f.id===criterio);
+      if (!comparable(va) && !comparable(vb)) return 0;
+      if (!comparable(va)) return 1;
+      if (!comparable(vb)) return -1;
+      return va.pct - vb.pct;
+    });
+  }
+
+  const items = orden.map(({p,filas})=>{
+    const cif = ["sodio","azucares","saturadas"].map(id=>{
+      const f = filas.find(x=>x.id===id);
+      if (!f || f.estado==="sin-dato") return `<span class="g">–</span>`;
+      if (f.estado==="inconsistente") return `<span class="g">!</span>`;
+      if (f.estado==="techo" && !f.concluyente) return `<span class="g">?</span>`;
+      return `<span class="${f.color}">${f.estado==="techo"?"≤":""}${Math.round(f.pct)}%</span>`;
+    }).join("");
+    const marca = p.codigo===actual.codigo ? ` <span class="etiqueta">escaneado</span>` : "";
+    return `<li><button class="comp" data-codigo="${p.codigo}">
+      <div><div class="nom">${p.nombre}${marca}</div><div class="mm">${p.marca||"Sin marca"}</div></div>
+      <div class="cifras num">${cif}</div></button></li>`;
+  }).join("");
+
+  let cierre = "";
+  if (criterio !== "relevancia"){
+    const conDato = orden.filter(o => comparable(o.filas.find(f=>f.id===criterio)));
+    const sinDato = orden.length - conDato.length;
+    const nomb = CRITERIOS.find(c=>c.id===criterio).texto.toLowerCase();
+    if (conDato.length){
+      cierre = `<p style="font-size:15px">Entre los productos con dato suficiente, <strong>${conDato[0].p.nombre}</strong>
+        presenta el menor contenido relativo según “${nomb}”. Es un dato, no una recomendación.
+        ${sinDato ? `<br><span style="color:var(--tinta-suave);font-size:14px">${sinDato} producto(s) quedaron fuera de la comparación por falta de datos.</span>`:""}</p>`;
+    }
+  }
+
+  $("#comparar-contenido").innerHTML = `
+    <div class="tarjeta">
+      <h2>Encontramos ${similares.length-1} productos de la misma categoría</h2>
+      <p style="font-size:14px;color:var(--tinta-suave);margin-top:-4px">La lista no viene ordenada por “mejor”. Elegí vos el criterio.</p>
+      <label class="campo" for="criterio">Ordenar por</label>
+      <select id="criterio">${CRITERIOS.map(c=>`<option value="${c.id}" ${c.id===criterio?"selected":""}>${c.texto}</option>`).join("")}</select>
+      <div style="height:14px"></div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;font-size:11px;color:var(--tinta-suave);text-transform:uppercase;letter-spacing:.06em">
+        <span>Sodio</span><span>Azúcar</span><span>Sat.</span></div>
+      <ul class="limpia">${items}</ul>
+      ${cierre}
+      <div class="meta">Porcentajes sobre el límite de referencia cada 100 g/ml.
+      “≤” marca una cota máxima calculada con azúcares totales. “?” significa que no alcanza para determinarlo.
+      “Similar” = misma categoría declarada en Open Food Facts.</div>
+    </div>`;
+
+  $("#criterio").onchange = e => pintarComparacion(e.target.value);
+  document.querySelectorAll(".comp").forEach(b=>{
+    b.onclick = () => { const p = similares.find(x=>x.codigo===b.dataset.codigo); if (p) pintarPanel(p); };
+  });
+}
+
+/* ── Producto no encontrado ───────────────────────────────────────── */
+const RANURAS = [
+  { id:"front",       titulo:"Frente del envase",        pista:"Que se lea la marca y el nombre." },
+  { id:"nutrition",   titulo:"Información nutricional",  pista:"La tabla completa, derecha y sin brillos." },
+  { id:"ingredients", titulo:"Ingredientes",             pista:"La lista entera, incluida la letra chica." }
+];
+let fotos = {};   // { front: dataURL, ... } — sólo en memoria
+
+/* Las fotos de un celular pesan varios megas y no pasan por la función.
+   Se reducen acá, en el teléfono, antes de salir. */
+function comprimir(archivo, ladoMax = 1600, calidad = 0.82){
+  return new Promise((listo, error) => {
+    const lector = new FileReader();
+    lector.onerror = () => error(new Error("no se pudo leer la foto"));
+    lector.onload = () => {
+      const img = new Image();
+      img.onerror = () => error(new Error("no se pudo abrir la foto"));
+      img.onload = () => {
+        // Una foto de etiqueta legible no puede ser diminuta.
+        if (Math.min(img.width, img.height) < 400){
+          error(new Error("La foto es muy chica para leer una etiqueta.")); return;
+        }
+        const escala = Math.min(1, ladoMax / Math.max(img.width, img.height));
+        const lienzo = document.createElement("canvas");
+        lienzo.width  = Math.round(img.width  * escala);
+        lienzo.height = Math.round(img.height * escala);
+        lienzo.getContext("2d").drawImage(img, 0, 0, lienzo.width, lienzo.height);
+        listo(lienzo.toDataURL("image/jpeg", calidad));
+      };
+      img.src = lector.result;
+    };
+    lector.readAsDataURL(archivo);
+  });
+}
+
+function pesoKB(dataURL){
+  return Math.round((dataURL.length - dataURL.indexOf(",") - 1) * 0.75 / 1024);
+}
+
+function pintarAportar(codigo, motivo){
+  fotos = {};
+  const sinRed = motivo === "sin-conexion" || motivo === "limite";
+  const titulo = motivo === "limite" ? "Hay que esperar un minuto"
+    : motivo === "sin-conexion" ? "No pudimos consultar la base"
+    : motivo === "sin-datos" ? "Completemos este producto"
+    : "Todavía no tenemos este producto";
+  const texto = motivo === "limite"
+    ? "La base limita cuántas consultas se pueden hacer por minuto y llegamos al tope. Esperá un minuto y probá otra vez. El producto puede existir igual."
+    : motivo === "sin-conexion"
+      ? "Puede ser la conexión o que el servicio no esté respondiendo. Probá de nuevo en un momento."
+      : motivo === "sin-datos"
+        ? "La ficha ya existe: lo que falta es la información nutricional. La foto de la tabla es la más útil de las tres."
+        : "Sacale fotos y queda cargado para todos. Con una sola ya ayudás.";
+
+  const ranuras = RANURAS.map(r => `
+    <li>
+      <div style="display:flex;justify-content:space-between;align-items:center;gap:12px">
+        <div>
+          <div style="font-weight:700">${r.titulo}</div>
+          <div style="font-size:13px;color:var(--tinta-suave)">${r.pista}</div>
+          <div id="estado-${r.id}" style="font-size:13px;margin-top:4px"></div>
+        </div>
+        <button class="btn sec chica" data-foto="${r.id}">Sacar</button>
+      </div>
+      <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment"
+             id="archivo-${r.id}" class="oculto">
+    </li>`).join("");
+
+  $("#aportar-contenido").innerHTML = `
+    <div class="tarjeta">
+      <h2>${titulo}</h2>
+      <div class="num" style="font-size:13px;color:var(--tinta-suave)">${codigo}</div>
+      <p>${texto}</p>
+      ${sinRed ? "" : `
+      <div class="tarjeta plana" style="border-color:var(--tinta)">
+        <div style="font-size:14px;color:var(--tinta-suave)">Las fotos van a quedar guardadas bajo este código:</div>
+        <div class="num" style="font-size:28px;font-weight:800;letter-spacing:.02em;margin:6px 0">${agrupar(codigo)}</div>
+        ${digitoValido(codigo) ? "" : `<div class="r" style="font-size:14px;font-weight:700">
+          Ojo: este número no pasa su propia verificación. Es muy probable que esté mal leído.</div>`}
+        <div style="font-size:14px">Si no es el número impreso en el envase, las fotos van a quedar
+        colgadas de otro producto y ensucian la base para todos. Volvé atrás y corregilo.</div>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;margin-top:12px">
+          <input type="checkbox" id="coincide" style="width:22px;height:22px;flex:none;margin-top:2px">
+          <span>Miré el envase y el número coincide.</span>
+        </label>
+      </div>
+
+      <ul class="limpia">${ranuras}</ul>
+
+      <div class="tarjeta plana" style="margin-top:16px">
+        <p style="font-size:14px;margin-top:0"><strong>Antes de enviar, tres cosas.</strong></p>
+        <p style="font-size:14px">Las fotos se publican en Open Food Facts, la base abierta que usa esta app.
+        Van a quedar visibles para cualquiera y bajo licencia Creative Commons: quien quiera puede reutilizarlas
+        citando el origen.</p>
+        <p style="font-size:14px">Subí solamente fotos <strong>sacadas por vos</strong>. Nada bajado de internet
+        ni copiado de la web de una marca.</p>
+        <p style="font-size:14px"><strong>Fotografiá únicamente el producto.</strong> Que no entren personas,
+        documentos, direcciones ni nada tuyo: la foto va a ser pública.</p>
+        <label style="display:flex;gap:10px;align-items:flex-start;font-size:15px;margin-top:12px">
+          <input type="checkbox" id="acepto" style="width:22px;height:22px;flex:none;margin-top:2px">
+          <span>Son fotos mías del producto y entiendo que se publican.</span>
+        </label>
+      </div>
+
+      <div style="height:12px"></div>
+      <button class="btn" id="b-enviar" disabled style="opacity:.45">Enviar a Open Food Facts</button>
+      <div id="envio-estado" style="font-size:15px;margin-top:12px"></div>
+
+      <div class="meta">No pedimos tu nombre ni tu mail. No guardamos las fotos en ningún servidor nuestro:
+      pasan por acá y van directo a la base pública.</div>`}
+    </div>
+    <button class="btn sec" data-volver="inicio">Volver</button>`;
+
+  document.querySelectorAll("[data-volver]").forEach(b => b.onclick = () => mostrar("inicio"));
+
+  if (!sinRed){
+    RANURAS.forEach(r => {
+      const boton = document.querySelector(`[data-foto="${r.id}"]`);
+      const campo = $(`#archivo-${r.id}`);
+      boton.onclick = () => campo.click();
+      campo.onchange = async () => {
+        const f = campo.files[0];
+        if (!f) return;
+        const estado = $(`#estado-${r.id}`);
+        estado.textContent = "Preparando…";
+        try{
+          const dataURL = await comprimir(f);
+          const kb = pesoKB(dataURL);
+          if (kb > 1150){ estado.innerHTML = `<span class="r">Quedó muy pesada (${kb} KB). Probá de nuevo.</span>`; return; }
+          if (kb < 25){ estado.innerHTML = `<span class="r">Salió casi vacía (${kb} KB). ¿Estaba tapado el lente?</span>`; return; }
+          fotos[r.id] = dataURL;
+          estado.innerHTML = `<span class="v">Lista · ${kb} KB</span>`;
+          boton.textContent = "Cambiar";
+        }catch(e){
+          estado.innerHTML = `<span class="r">No pudimos usar esa foto.</span>`;
+        }
+        revisarEnvio();
+      };
+    });
+    $("#acepto").onchange = revisarEnvio;
+    $("#coincide").onchange = revisarEnvio;
+    $("#b-enviar").onclick = () => enviarFotos(codigo);
+  }
+  mostrar("aportar");
+}
+
+function revisarEnvio(){
+  const b = $("#b-enviar");
+  if (!b) return;
+  const listo = Object.keys(fotos).length > 0 && $("#acepto").checked && $("#coincide").checked;
+  b.disabled = !listo;
+  b.style.opacity = listo ? "1" : ".45";
+}
+
+async function enviarFotos(codigo){
+  const b = $("#b-enviar"), estado = $("#envio-estado");
+  b.disabled = true; b.style.opacity = ".45"; b.textContent = "Enviando…";
+  const pendientes = Object.keys(fotos);
+  let enviadas = 0, fallidas = [];
+
+  for (const tipo of pendientes){
+    const nombre = RANURAS.find(r => r.id === tipo).titulo.toLowerCase();
+    estado.textContent = `Enviando ${nombre}…`;
+    try{
+      const r = await fetch("/api/aportar", {
+        method:"POST",
+        headers:{ "Content-Type":"application/json" },
+        body: JSON.stringify({ codigo, tipo, imagen: fotos[tipo] })
+      });
+      const d = await r.json().catch(()=>({}));
+      if (r.ok && d.ok){ enviadas++; $(`#estado-${tipo}`).innerHTML = `<span class="v">Enviada</span>`; }
+      else {
+        fallidas.push({ nombre, motivo: d.mensaje || d.error || d.detalle || `error ${r.status}` });
+        $(`#estado-${tipo}`).innerHTML = `<span class="r">No se envió</span>`;
+      }
+    }catch(e){
+      fallidas.push({ nombre, motivo:"no hubo respuesta" });
+      $(`#estado-${tipo}`).innerHTML = `<span class="r">No se envió</span>`;
+    }
+  }
+
+  b.textContent = "Enviar a Open Food Facts";
+  revisarEnvio();
+
+  if (enviadas && !fallidas.length){
+    estado.innerHTML = `<strong>Listo, gracias.</strong> ${enviadas === 1 ? "La foto quedó" : "Las fotos quedaron"} en la base pública.
+      Open Food Facts las revisa y lee los datos de la etiqueta; el producto puede tardar un rato en aparecer completo.`;
+  } else if (enviadas){
+    estado.innerHTML = `<strong>Se enviaron ${enviadas}.</strong> No salieron: ${fallidas.map(f=>`${f.nombre} (${f.motivo})`).join(", ")}.`;
+  } else {
+    estado.innerHTML = `<strong>No se pudo enviar.</strong> ${fallidas.map(f=>f.motivo).join(" · ")}<br>
+      Las fotos siguen acá: podés intentar de nuevo sin sacarlas otra vez.`;
+  }
+}
+
+/* El lector puede equivocarse y devolver un número que igual pasa la
+   validación del dígito verificador. Entonces buscaríamos otro producto
+   sin que nadie se entere. Antes de consultar, se lo mostramos al usuario
+   para que lo compare con el envase. */
+function confirmarLectura(codigo){
+  mostrar("inicio");
+  $("#codigo").value = codigo;
+  const dudoso = !digitoValido(codigo);
+  const caja = $("#aviso-lectura");
+  caja.innerHTML = `<div style="font-size:14px;color:var(--tinta-suave)">Leímos este número:</div>
+    <div class="num" style="font-size:28px;font-weight:800;letter-spacing:.02em;margin:4px 0">${agrupar(codigo)}</div>
+    ${dudoso ? `<div style="font-size:14px;font-weight:700" class="r">Este número no pasa su propia verificación:
+      casi seguro está mal leído. Escribilo a mano.</div>` : ""}
+    <div style="font-size:14px">Comparalo con el que está impreso debajo del código de barras.
+    Si no coincide, corregilo abajo antes de buscar.</div>
+    <div style="height:10px"></div>
+    <button class="btn" id="b-confirmar">${dudoso ? "Buscar igual" : "Es correcto, buscar"}</button>`;
+  caja.classList.remove("oculto");
+  $("#b-confirmar").onclick = () => { caja.classList.add("oculto"); consultar($("#codigo").value); };
+  caja.scrollIntoView({ behavior:"smooth", block:"center" });
+}
+
+/* ── Flujo ────────────────────────────────────────────────────────── */
+async function consultar(codigo){
+  codigo = (codigo||"").replace(/\D/g,"");
+  if (codigo.length < 8){ alert("El código de barras tiene entre 8 y 14 dígitos."); return; }
+  $("#b-buscar").textContent = "Buscando…";
+  const r = await buscarProducto(codigo);
+  $("#b-buscar").textContent = "Buscar";
+  if (r.ok) pintarPanel(r.producto); else pintarAportar(codigo, r.motivo);
+}
+
+let stream = null, escaneando = false, linterna = false;
+/* ── Lectura en navegadores sin lector nativo (iPhone) ─────────────
+   Safari no trae BarcodeDetector, y en iPhone todos los navegadores son
+   Safari por dentro. Cargamos ZXing sólo en ese caso: en Android no se
+   descarga nada. Es más lenta que la nativa, pero funciona.
+   La librería está en modo mantenimiento, así que la versión va fija y
+   con espejos: si un CDN se cae, probamos el siguiente. */
+const FUENTES_ZXING = [
+  "https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js",
+  "https://cdn.jsdelivr.net/npm/@zxing/library@0.21.3/umd/index.min.js",
+  "https://unpkg.com/@zxing/library@latest/umd/index.min.js"
+];
+let lectorZX = null;
+
+function cargarGuion(url){
+  return new Promise((listo, error) => {
+    const s = document.createElement("script");
+    s.src = url;
+    s.onload = listo;
+    s.onerror = () => error(new Error("no cargó " + url));
+    document.head.appendChild(s);
+  });
+}
+
+async function cargarZXing(){
+  if (window.ZXing) return true;
+  for (const url of FUENTES_ZXING){
+    try{ await cargarGuion(url); if (window.ZXing) return true; }catch(e){}
+  }
+  return false;
+}
+
+async function escanearConLibreria(video, estado){
+  estado.textContent = "Preparando el lector…";
+  const hay = await cargarZXing();
+  if (!hay){
+    estado.innerHTML = "No pudimos cargar el lector. Revisá la conexión, o ingresá el código a mano en la pantalla anterior.";
+    return;
+  }
+  const pistas = new Map();
+  pistas.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [
+    ZXing.BarcodeFormat.EAN_13, ZXing.BarcodeFormat.EAN_8, ZXing.BarcodeFormat.UPC_A
+  ]);
+  pistas.set(ZXing.DecodeHintType.TRY_HARDER, true);
+
+  let ultimo = null, repeticiones = 0;
+  const aceptar = (v) => {
+    if (!escaneando || !v) return;
+    if (v === ultimo){ repeticiones++; } else { ultimo = v; repeticiones = 1; }
+    estado.textContent = `Leyendo ${v} (${repeticiones}/3)…`;
+    if (repeticiones >= 3){ cerrarCamara(); confirmarLectura(v); }
+  };
+
+  /* Camino preferido: manejamos nosotros los cuadros. Así podemos recortar
+     la banda central de la imagen, que es donde el usuario apunta, y
+     descartar el resto. Menos superficie para analizar, más rápido, y
+     menos ruido alrededor. */
+  const puedeManual = ZXing.MultiFormatReader && ZXing.HTMLCanvasElementLuminanceSource
+                      && ZXing.BinaryBitmap && ZXing.HybridBinarizer;
+  if (puedeManual){
+    try{
+      stream = await navigator.mediaDevices.getUserMedia({ video:{
+        facingMode:{ ideal:"environment" }, width:{ ideal:1920 }, height:{ ideal:1080 }
+      }});
+      video.srcObject = stream; await video.play();
+      $("#guia").classList.remove("oculto");
+      estado.textContent = "Buscando un código…";
+
+      const lector = new ZXing.MultiFormatReader();
+      lector.setHints(pistas);
+      const lienzo = document.createElement("canvas");
+      const ctx = lienzo.getContext("2d", { willReadFrequently:true });
+      escaneando = true;
+
+      const intentar = (sx, sy, sw, sh) => {
+        lienzo.width = sw; lienzo.height = sh;
+        ctx.drawImage(video, sx, sy, sw, sh, 0, 0, sw, sh);
+        try{
+          const fuente = new ZXing.HTMLCanvasElementLuminanceSource(lienzo);
+          const mapa = new ZXing.BinaryBitmap(new ZXing.HybridBinarizer(fuente));
+          const r = lector.decode(mapa);
+          return r && r.getText();
+        }catch(e){ return null; }
+        finally{ try{ lector.reset(); }catch(e){} }
+      };
+
+      let alterna = 0;
+      const ciclo = () => {
+        if (!escaneando) return;
+        const vw = video.videoWidth, vh = video.videoHeight;
+        if (vw && vh){
+          let v = null;
+          if (alterna++ % 2 === 0){
+            // Banda central: donde apunta la gente.
+            v = intentar(Math.round(vw*0.05), Math.round(vh*0.28), Math.round(vw*0.90), Math.round(vh*0.44));
+          } else {
+            v = intentar(0, 0, vw, vh);   // cuadro completo, por las dudas
+          }
+          if (v){ aceptar(v); if (!escaneando) return; }
+        }
+        setTimeout(ciclo, 120);
+      };
+      ciclo();
+      return;
+    }catch(e){
+      // si algo falla, seguimos con el método de la librería
+      if (stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+    }
+  }
+
+  lectorZX = new ZXing.BrowserMultiFormatReader(pistas, 200);
+  escaneando = true;
+  estado.textContent = "Buscando un código…";
+  const restricciones = { video:{ facingMode:{ ideal:"environment" }, width:{ ideal:1920 }, height:{ ideal:1080 } } };
+  try{
+    $("#guia").classList.remove("oculto");
+    await lectorZX.decodeFromConstraints(restricciones, video, (resultado) => {
+      if (resultado) aceptar(resultado.getText());
+    });
+  }catch(e){
+    try{ await lectorZX.decodeFromVideoDevice(null, video, (resultado) => { if (resultado) aceptar(resultado.getText()); }); }
+    catch(e2){ estado.textContent = "No pudimos usar la cámara. Revisá el permiso, o ingresá el código a mano."; }
+  }
+}
+
+async function abrirCamara(){
+  mostrar("escaner");
+  const video = $("#camara"), estado = $("#estado-camara");
+  if (!("BarcodeDetector" in window)){
+    await escanearConLibreria(video, estado);
+    return;
+  }
+  try{
+    // Más resolución: las barras finas de los costados de un envase
+    // curvo se pierden en video de baja definición.
+    stream = await navigator.mediaDevices.getUserMedia({ video:{
+      facingMode:"environment",
+      width:{ ideal:1920 },
+      height:{ ideal:1080 }
+    }});
+    video.srcObject = stream; await video.play();
+
+    const pista = stream.getVideoTracks()[0];
+    const capacidades = pista.getCapabilities ? pista.getCapabilities() : {};
+    // Enfoque continuo: el envase se mueve en la mano todo el tiempo.
+    if (capacidades.focusMode && capacidades.focusMode.includes("continuous")){
+      try{ await pista.applyConstraints({ advanced:[{ focusMode:"continuous" }] }); }catch(e){}
+    }
+    // Linterna: es lo que más ayuda en cilindros y pliegues, porque borra
+    // las sombras que el lector confunde con barras.
+    if (capacidades.torch){
+      $("#b-linterna").classList.remove("oculto");
+      $("#b-linterna").onclick = async () => {
+        linterna = !linterna;
+        try{
+          await pista.applyConstraints({ advanced:[{ torch: linterna }] });
+          $("#b-linterna").textContent = linterna ? "Apagar linterna" : "Prender linterna";
+        }catch(e){ $("#b-linterna").classList.add("oculto"); }
+      };
+    }
+    estado.textContent = "Buscando un código…";
+    $("#guia").classList.remove("oculto");
+    const detector = new BarcodeDetector({ formats:["ean_13","ean_8","upc_a","upc_e","code_128"] });
+    escaneando = true;
+    let ultimo = null, repeticiones = 0;
+    const tick = async () => {
+      if (!escaneando) return;
+      try{
+        const codes = await detector.detect(video);
+        if (codes.length){
+          // Los productos argentinos son EAN-13. Si hay varias lecturas,
+          // esa manda: los formatos cortos suelen ser lecturas parciales.
+          const elegido = codes.find(c => c.format === "ean_13") || codes[0];
+          const v = elegido.rawValue;
+          if (v === ultimo){ repeticiones++; } else { ultimo = v; repeticiones = 1; }
+          estado.textContent = `Leyendo ${v} (${repeticiones}/3)…`;
+          // Tres lecturas idénticas: una mala lectura rara vez se repite igual.
+          if (repeticiones >= 3){ cerrarCamara(); confirmarLectura(v); return; }
+        }
+      }catch(e){}
+      requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  }catch(e){
+    estado.textContent = "No pudimos usar la cámara. Revisá el permiso, o ingresá el código a mano.";
+  }
+}
+function cerrarCamara(){
+  escaneando = false; linterna = false;
+  const b = document.getElementById("b-linterna");
+  if (b){ b.classList.add("oculto"); b.textContent = "Prender linterna"; }
+  const g = document.getElementById("guia");
+  if (g) g.classList.add("oculto");
+  if (lectorZX){ try{ lectorZX.reset(); }catch(e){} lectorZX = null; }
+  if (stream){ stream.getTracks().forEach(t=>t.stop()); stream = null; }
+}
+
+$("#b-escanear").onclick = abrirCamara;
+$("#b-buscar").onclick = () => consultar($("#codigo").value);
+$("#codigo").addEventListener("keydown", e => { if (e.key === "Enter") consultar($("#codigo").value); });
+$("#b-demo").onclick = () => pintarPanel(normalizar(DEMO[0]));
+$("#b-cancelar-camara").onclick = () => { cerrarCamara(); mostrar("inicio"); };
+$("#b-volver-panel").onclick = () => mostrar("panel");
+document.querySelectorAll("[data-volver='inicio']").forEach(b => b.onclick = () => mostrar("inicio"));
+
+mostrar("inicio");
+</script>
+</body>
+</html>
