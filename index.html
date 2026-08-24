@@ -151,6 +151,11 @@
     <div id="comparar-contenido"></div>
   </section>
 
+  <section id="p-datos" class="oculto">
+    <button class="btn sec chica" data-volver="inicio">← Volver</button>
+    <div id="datos-contenido"></div>
+  </section>
+
   <section id="p-aportar" class="oculto">
     <button class="btn sec chica" data-volver="inicio">← Volver</button>
     <div id="aportar-contenido"></div>
@@ -500,6 +505,40 @@ function normalizar(p){
   };
 }
 
+/* Datos cargados por gente desde la etiqueta. No vienen de Open Food
+   Facts y nunca se escriben allá: viven en nuestra base y se muestran
+   siempre marcados. Solo rellenan huecos, nunca pisan un dato oficial. */
+const MAPA_PROPIO = { azucares:["azucares_anadidos","azucares_totales"], sodio:["sodio_mg"],
+                      saturadas:["saturadas"], totales:["grasas"], calorias:["kcal"] };
+
+async function traerPropios(codigo){
+  try{
+    const r = await fetch("/api/datos?codigo=" + encodeURIComponent(codigo));
+    if (!r.ok) return null;
+    const d = await r.json();
+    return d.hay ? d : null;
+  }catch(e){ return null; }
+}
+
+function fusionarPropios(prod, propios){
+  if (!propios || !propios.datos) return;
+  prod.propios = {};
+  if (propios.base === "100ml") prod.nutri.liquido = true;
+  for (const [campo, info] of Object.entries(propios.datos)){
+    if (prod.nutri[campo] === null || prod.nutri[campo] === undefined){
+      prod.nutri[campo] = info.valor;
+      prod.propios[campo] = info;
+    }
+  }
+  if (prod.propios.sodio_mg) prod.nutri.sodio_declarado = false;
+}
+
+function estadoPropio(p, id){
+  if (!p || !p.propios) return null;
+  for (const c of (MAPA_PROPIO[id] || [])) if (p.propios[c]) return p.propios[c];
+  return null;
+}
+
 const CAMPOS = "code,product_name,product_name_es,brands,categories_tags,nutriments,stores,countries_tags,last_modified_t,additives_tags,ingredients_text_es,ingredients_text";
 // nutriments trae carbohidratos y proteínas: se usan para el control de coherencia.
 const PAIS = "argentina";   // la comparación sólo sirve si son productos que se consiguen acá
@@ -542,7 +581,11 @@ async function buscarProducto(codigo){
     try{
       const d = await pedir({tipo:"producto", codigo:c},
                             `${API_BASE}/api/v2/product/${encodeURIComponent(c)}?fields=${CAMPOS}`);
-      if (d.status === 1 && d.product) return { ok:true, producto:normalizar(d.product) };
+      if (d.status === 1 && d.product){
+        const prod = normalizar(d.product);
+        fusionarPropios(prod, await traerPropios(prod.codigo));
+        return { ok:true, producto:prod };
+      }
     }catch(e){
       if (String(e.message).includes("429")) limite = true; else fallo = true;
     }
@@ -570,7 +613,7 @@ async function buscarSimilares(prod){
    INTERFAZ
    ═══════════════════════════════════════════════════════════════════════ */
 const $ = s => document.querySelector(s);
-const pantallas = ["inicio","escaner","panel","comparar","aportar"];
+const pantallas = ["inicio","escaner","panel","comparar","aportar","datos"];
 let actual = null;
 
 function mostrar(nombre){
@@ -596,7 +639,9 @@ function veces(pct){
   return coma(pct/100,1)+"× el límite";
 }
 
-function filaNutriente(f, unidadBase){
+function filaNutriente(f, unidadBase, prod){
+  const pr = estadoPropio(prod, f.id);
+  const sello = pr ? `<span class="etiqueta">no oficial \u00b7 ${pr.estado==="confirmado"?"confirmado por 2":"sin confirmar"}</span>` : "";
   if (f.estado === "cero"){
     return `<div class="fila">
       <div class="encabezado"><div class="nombre">${f.nombre}</div>
@@ -605,13 +650,13 @@ function filaNutriente(f, unidadBase){
   }
   if (f.estado === "inconsistente"){
     return `<div class="fila">
-      <div class="encabezado"><div class="nombre">${f.nombre}</div>
+      <div class="encabezado"><div class="nombre">${f.nombre}${sello}</div>
       <div class="pct corto g">Dato inconsistente</div></div>
       <div class="detalle">${f.motivo}</div></div>`;
   }
   if (f.estado === "sin-dato"){
     return `<div class="fila">
-      <div class="encabezado"><div class="nombre">${f.nombre}</div>
+      <div class="encabezado"><div class="nombre">${f.nombre}${sello}</div>
       <div class="pct corto g">No se puede calcular</div></div>
       <div class="detalle">${f.motivo} No se completa por estimación.</div></div>`;
   }
@@ -625,7 +670,7 @@ function filaNutriente(f, unidadBase){
   const extra = f.motivo ? `<br>${f.motivo}` : (f.condicion ? `<br>${f.condicion}` : `· ${veces(f.pct)}`);
   return `<div class="fila">
     <div class="encabezado">
-      <div class="nombre">${f.nombre}${etiqueta}</div>
+      <div class="nombre">${f.nombre}${etiqueta}${sello}</div>
       <div class="pct num ${f.color}${f.estado==="techo"&&!f.concluyente?" corto":""}">${f.estado==="techo"&&!f.concluyente?"Indeterminado":cifra}</div>
     </div>
     ${barra(f)}
@@ -650,12 +695,17 @@ function pintarPanel(p){
       ${p.marca?`<div style="color:var(--tinta-suave);font-size:15px;margin-top:-4px">${p.marca}</div>`:""}
       <div class="num" style="font-size:12px;color:var(--tinta-suave);margin-top:6px">${p.codigo}</div>
       <div style="height:6px"></div>
+      ${p.propios && Object.keys(p.propios).length ? `<div class="tarjeta plana" style="border-color:var(--tinta)">
+        <h3>Algunos n\u00fameros no son de la base</h3>
+        <p style="font-size:15px">Los cargó alguien copiándolos de la etiqueta, porque Open Food Facts
+        no los tiene. No están verificados por nadie. Los marcamos uno por uno y, si tenés el envase
+        en la mano, lo que dice la etiqueta manda.</p></div>` : ""}
       ${problemas.length ? `<div class="tarjeta plana" style="border-color:var(--ambar)">
         <h3 class="a">Los datos de este producto no cierran</h3>
         ${problemas.map(x=>`<p style="font-size:14px;margin:6px 0">${x}</p>`).join("")}
         <p style="font-size:14px;margin-bottom:0">Los porcentajes de abajo pueden estar equivocados.
         Si tenés el envase en la mano, lo que dice la etiqueta manda.</p></div>` : ""}
-      ${filas.map(f=>filaNutriente(f, ub)).join("")}
+      ${filas.map(f=>filaNutriente(f, ub, p)).join("")}
       ${(() => {
         const L = leyendas(p);
         if (!L.length) return "";
@@ -677,6 +727,8 @@ function pintarPanel(p){
             : "La ficha está incompleta: " + faltan + " de " + filas.length + " indicadores no se pueden calcular."}
           Si tenés el envase en la mano, con las fotos de la etiqueta ayudás a completarlo.</p>
           <button class="btn" id="b-completar">Aportar fotos de la etiqueta</button>
+          <div style="height:10px"></div>
+          <button class="btn sec" id="b-cargar-datos">Copiar los datos de la etiqueta</button>
         </div>`;
       })()}
       ${trans}
@@ -709,6 +761,8 @@ function pintarPanel(p){
   $("#b-comparar").onclick = irAComparar;
   const bc = document.getElementById("b-completar");
   if (bc) bc.onclick = () => pintarAportar(p.codigo, "sin-datos");
+  const bd = document.getElementById("b-cargar-datos");
+  if (bd) bd.onclick = () => pintarFormularioDatos(p);
   $("#b-porque").onclick = () => $("#porque").classList.toggle("oculto");
   $("#tipo").onchange = e => { actual.nutri.liquido = (e.target.value === "liquido"); pintarPanel(actual); };
   mostrar("panel");
@@ -750,15 +804,22 @@ async function irAComparar(){
 
 function pintarComparacion(criterio){
   const conEval = similares.map(p => ({ p, filas:evaluar(p.nutri) }));
-  const comparable = f => f && (f.estado === "medido" || (f.estado === "techo" && f.concluyente));
+  /* Un dato propio sin confirmar no puede empujar a un producto por encima
+     de otro: se muestra, pero no participa del orden. */
+  const comparable = (f, prod) => {
+    if (!f) return false;
+    const pr = estadoPropio(prod, f.id);
+    if (pr && pr.estado !== "confirmado") return false;
+    return f.estado === "medido" || (f.estado === "techo" && f.concluyente);
+  };
 
   let orden = conEval;
   if (criterio !== "relevancia"){
     orden = [...conEval].sort((a,b)=>{
       const va = a.filas.find(f=>f.id===criterio), vb = b.filas.find(f=>f.id===criterio);
-      if (!comparable(va) && !comparable(vb)) return 0;
-      if (!comparable(va)) return 1;
-      if (!comparable(vb)) return -1;
+      if (!comparable(va, a.p) && !comparable(vb, b.p)) return 0;
+      if (!comparable(va, a.p)) return 1;
+      if (!comparable(vb, b.p)) return -1;
       return va.pct - vb.pct;
     });
   }
@@ -779,7 +840,7 @@ function pintarComparacion(criterio){
 
   let cierre = "";
   if (criterio !== "relevancia"){
-    const conDato = orden.filter(o => comparable(o.filas.find(f=>f.id===criterio)));
+    const conDato = orden.filter(o => comparable(o.filas.find(f=>f.id===criterio), o.p));
     const sinDato = orden.length - conDato.length;
     const nomb = CRITERIOS.find(c=>c.id===criterio).texto.toLowerCase();
     if (conDato.length){
@@ -809,6 +870,87 @@ function pintarComparacion(criterio){
   document.querySelectorAll(".comp").forEach(b=>{
     b.onclick = () => { const p = similares.find(x=>x.codigo===b.dataset.codigo); if (p) pintarPanel(p); };
   });
+}
+
+/* ── Copiar los datos de la etiqueta ───────────────────────────────
+   La persona tiene el envase en la mano: puede leer seis números más
+   rápido y con menos error que cualquier lectura automática. Estos
+   datos NO se escriben en Open Food Facts. */
+const CAMPOS_ETIQUETA = [
+  { id:"kcal",              texto:"Valor energético",   unidad:"kcal", obligatorio:true },
+  { id:"azucares_totales",  texto:"Azúcares totales",   unidad:"g" },
+  { id:"azucares_anadidos", texto:"Azúcares añadidos",  unidad:"g" },
+  { id:"grasas",            texto:"Grasas totales",     unidad:"g" },
+  { id:"saturadas",         texto:"Grasas saturadas",   unidad:"g" },
+  { id:"sodio_mg",          texto:"Sodio",              unidad:"mg" }
+];
+
+function pintarFormularioDatos(p){
+  const ml = p.nutri.liquido;
+  $("#datos-contenido").innerHTML = `
+    <div class="tarjeta">
+      <h2>Copiá los datos de la etiqueta</h2>
+      <div style="color:var(--tinta-suave);font-size:15px">${p.nombre}</div>
+      <div class="num" style="font-size:13px;color:var(--tinta-suave);margin-top:4px">${agrupar(p.codigo)}</div>
+      <p style="font-size:15px">Buscá en el envase la columna que dice <strong>cada 100 ${ml?"ml":"g"}</strong>,
+      no la de la porción. Si algún dato no está, dejalo vacío.</p>
+      <label class="campo" for="base">Los valores que vas a cargar son</label>
+      <select id="base">
+        <option value="100g" ${ml?"":"selected"}>Cada 100 g (sólido)</option>
+        <option value="100ml" ${ml?"selected":""}>Cada 100 ml (bebida)</option>
+      </select>
+      ${CAMPOS_ETIQUETA.map(c=>`
+        <label class="campo" for="c-${c.id}">${c.texto} (${c.unidad})${c.obligatorio?" — obligatorio":""}</label>
+        <input type="text" inputmode="decimal" id="c-${c.id}" autocomplete="off" placeholder="0">`).join("")}
+      <div style="height:16px"></div>
+      <button class="btn" id="b-guardar-datos">Guardar</button>
+      <div id="datos-estado" style="font-size:15px;margin-top:12px"></div>
+      <div class="meta">Estos números <strong>no se envían a Open Food Facts</strong>: quedan en la base
+      de Semáforo Nutricional y se muestran siempre marcados como no oficiales. Cuando dos personas
+      carguen el mismo valor por separado, pasa a figurar como confirmado.</div>
+    </div>
+    <button class="btn sec" data-volver="inicio">Volver</button>`;
+
+  document.querySelectorAll("[data-volver]").forEach(b=>b.onclick=()=>mostrar("inicio"));
+  $("#b-guardar-datos").onclick = () => guardarDatos(p);
+  mostrar("datos");
+}
+
+async function guardarDatos(p){
+  const estado = $("#datos-estado");
+  const valores = {};
+  for (const c of CAMPOS_ETIQUETA){
+    const bruto = $("#c-" + c.id).value.trim().replace(",", ".");
+    if (bruto === "") continue;
+    const n = Number(bruto);
+    if (!isFinite(n) || n < 0){
+      estado.innerHTML = `<span class="r">Revisá ${c.texto}: no parece un número.</span>`;
+      return;
+    }
+    valores[c.id] = n;
+  }
+  if (valores.kcal === undefined){
+    estado.innerHTML = `<span class="r">El valor energético es obligatorio: sin él no se puede calcular ningún límite.</span>`;
+    return;
+  }
+  const b = $("#b-guardar-datos");
+  b.disabled = true; b.textContent = "Guardando…";
+  try{
+    const r = await fetch("/api/datos?codigo=" + encodeURIComponent(p.codigo), {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ base: $("#base").value, valores })
+    });
+    const d = await r.json().catch(()=>({}));
+    if (r.ok && d.ok){
+      estado.innerHTML = `<strong>Guardado.</strong> Volvé a buscar el producto para ver el panel.`;
+      b.textContent = "Guardado";
+      return;
+    }
+    estado.innerHTML = `<span class="r">${d.mensaje || d.error || "No se pudo guardar."}</span>`;
+  }catch(e){
+    estado.innerHTML = `<span class="r">No hubo respuesta. Probá de nuevo.</span>`;
+  }
+  b.disabled = false; b.textContent = "Guardar";
 }
 
 /* ── Producto no encontrado ───────────────────────────────────────── */
