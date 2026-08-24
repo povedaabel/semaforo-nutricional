@@ -251,6 +251,21 @@ function coherencia(n){
   return problemas;
 }
 
+/* Leyendas precautorias del etiquetado argentino. No son porcentajes:
+   son textos obligatorios cuando el producto lleva edulcorantes o
+   cafeína. Las detectamos por los ingredientes declarados, así que
+   pueden faltar si la ficha está incompleta. */
+const EDULCORANTES = ["en:e950","en:e951","en:e952","en:e954","en:e955","en:e957","en:e960","en:e960a","en:e961","en:e962","en:e968"];
+function leyendas(p){
+  const L = [];
+  const ing = (p.ingredientes || "").toLowerCase();
+  const hayEdul = (p.aditivos || []).some(a => EDULCORANTES.includes(a))
+    || /edulcorante|sucralosa|aspartam|acesulfam|estevia|steviol|sacarina|ciclamato/.test(ing);
+  if (hayEdul) L.push("CONTIENE EDULCORANTES, NO RECOMENDABLE EN NIÑOS/AS");
+  if (/cafe[ií]na|caffeine|guaran/.test(ing)) L.push("CONTIENE CAFEÍNA. EVITAR EN NIÑOS/AS");
+  return L;
+}
+
 function evaluar(n){
   const filas = [];
   const kcal = n.kcal;
@@ -259,7 +274,16 @@ function evaluar(n){
   (function(){
     const base = { id:"azucares", nombre:"Azúcares añadidos", unidad:"g",
       nota:"Límite: "+MOTOR.azucares_pct_energia+"% de la energía, medido sobre azúcares añadidos. Open Food Facts casi nunca informa azúcares añadidos: normalmente sólo trae azúcares totales, que incluyen los propios del alimento." };
-    if (!kcal){ filas.push({...base, estado:"sin-dato", motivo:"Falta el valor energético."}); return; }
+    if (kcal === null){ filas.push({...base, estado:"sin-dato", motivo:"Falta el valor energético."}); return; }
+    /* Cero calorías no es "falta el dato": es un dato. Una bebida sin
+       energía no tiene exceso de nada, y eso hay que decirlo. */
+    if (kcal === 0){
+      const v = n.azucares_anadidos !== null ? n.azucares_anadidos : n.azucares_totales;
+      if (v === null) filas.push({...base, estado:"sin-dato", motivo:"No hay dato de azúcares."});
+      else if (v > 0) filas.push({...base, estado:"inconsistente", motivo:"Declara azúcares pero cero calorías, y el azúcar aporta energía."});
+      else filas.push({...base, estado:"cero", color:"v", motivo:"No aporta energía ni azúcares."});
+      return;
+    }
     const limite = (MOTOR.azucares_pct_energia/100 * kcal) / 4;
 
     /* Un cero declarado en azúcares añadidos, con azúcares totales por
@@ -333,7 +357,7 @@ function evaluar(n){
   (function(){
     const base = { id:"calorias", nombre:"Calorías", unidad:"kcal",
       nota:"Límite: "+MOTOR.kcal_solido_100g+" kcal/100 g en sólidos y "+MOTOR.kcal_liquido_100ml+" kcal/100 ml en bebidas. En la norma el sello de calorías sólo corresponde si además hay exceso de azúcares, grasas totales o saturadas." };
-    if (!kcal){ filas.push({...base, estado:"sin-dato", motivo:"No hay valor energético."}); return; }
+    if (kcal === null){ filas.push({...base, estado:"sin-dato", motivo:"No hay valor energético."}); return; }
     const limite = n.liquido ? MOTOR.kcal_liquido_100ml : MOTOR.kcal_solido_100g;
     const pct = kcal/limite*100;
     const otroExceso = filas.some(f => ["azucares","saturadas","totales"].includes(f.id)
@@ -353,7 +377,12 @@ function evaluar(n){
 function porEnergia(n, id, nombre, valor, pctLimite, kcalPorGramo){
   const base = { id, nombre, unidad:"g",
     nota:"Límite: "+pctLimite+"% de la energía total." };
-  if (!n.kcal) return {...base, estado:"sin-dato", motivo:"Falta el valor energético."};
+  if (n.kcal === null) return {...base, estado:"sin-dato", motivo:"Falta el valor energético."};
+  if (n.kcal === 0){
+    if (valor === null) return {...base, estado:"sin-dato", motivo:"No hay dato de "+nombre.toLowerCase()+"."};
+    if (valor > 0) return {...base, estado:"inconsistente", motivo:"Declara "+nombre.toLowerCase()+" pero cero calorías, y la grasa aporta energía."};
+    return {...base, estado:"cero", color:"v", motivo:"No aporta energía."};
+  }
   if (valor === null) return {...base, estado:"sin-dato", motivo:"No hay dato de "+nombre.toLowerCase()+"."};
   const limite = (pctLimite/100 * n.kcal) / kcalPorGramo;
   const pct = valor/limite*100;
@@ -450,6 +479,8 @@ function normalizar(p){
     categorias:cats,
     demo:!!p.demo,
     tiendas:(p.stores||"").trim(),
+    aditivos:p.additives_tags||[],
+    ingredientes:(p.ingredients_text_es || p.ingredients_text || ""),
     actualizado:p.last_modified_t ? new Date(p.last_modified_t*1000) : null,
     liquidoInferido:liquido,
     nutri:{
@@ -469,7 +500,7 @@ function normalizar(p){
   };
 }
 
-const CAMPOS = "code,product_name,product_name_es,brands,categories_tags,nutriments,stores,countries_tags,last_modified_t";
+const CAMPOS = "code,product_name,product_name_es,brands,categories_tags,nutriments,stores,countries_tags,last_modified_t,additives_tags,ingredients_text_es,ingredients_text";
 // nutriments trae carbohidratos y proteínas: se usan para el control de coherencia.
 const PAIS = "argentina";   // la comparación sólo sirve si son productos que se consiguen acá
 
@@ -566,6 +597,12 @@ function veces(pct){
 }
 
 function filaNutriente(f, unidadBase){
+  if (f.estado === "cero"){
+    return `<div class="fila">
+      <div class="encabezado"><div class="nombre">${f.nombre}</div>
+      <div class="pct v">0%</div></div>
+      <div class="detalle">${f.motivo}</div></div>`;
+  }
   if (f.estado === "inconsistente"){
     return `<div class="fila">
       <div class="encabezado"><div class="nombre">${f.nombre}</div>
@@ -619,6 +656,16 @@ function pintarPanel(p){
         <p style="font-size:14px;margin-bottom:0">Los porcentajes de abajo pueden estar equivocados.
         Si tenés el envase en la mano, lo que dice la etiqueta manda.</p></div>` : ""}
       ${filas.map(f=>filaNutriente(f, ub)).join("")}
+      ${(() => {
+        const L = leyendas(p);
+        if (!L.length) return "";
+        return `<div class="tarjeta plana" style="border-color:var(--tinta)">
+          ${L.map(t=>`<div style="font-weight:800;letter-spacing:.02em">${t}</div>`).join("")}
+          <div class="meta" style="border:none;padding-top:8px">Leyendas del etiquetado argentino.
+          Las deducimos de los ingredientes declarados en la base: si la ficha está incompleta,
+          pueden faltar. La etiqueta del envase manda.</div>
+        </div>`;
+      })()}
       ${(() => {
         const faltan = filas.filter(f => f.estado === "sin-dato").length;
         if (!faltan || p.demo) return "";
