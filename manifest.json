@@ -1,0 +1,15 @@
+{
+  "name": "Semáforo Nutricional",
+  "short_name": "Semáforo",
+  "description": "Compará alimentos. No los juzga: muestra los números y deja elegir.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#EDF1F2",
+  "theme_color": "#12181C",
+  "lang": "es-AR",
+  "icons": [
+    { "src": "/icono.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
