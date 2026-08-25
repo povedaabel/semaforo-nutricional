@@ -1128,9 +1128,18 @@ function pintarAportar(codigo, motivo){
       <div class="meta">No pedimos tu nombre ni tu mail. No guardamos las fotos en ningún servidor nuestro:
       pasan por acá y van directo a la base pública.</div>`}
     </div>
+    ${sinRed ? "" : `<div class="tarjeta plana">
+      <h3>¿Querés que el producto sirva ya mismo?</h3>
+      <p style="font-size:15px">Las fotos las procesa Open Food Facts y puede tardar días. Si copiás
+      los números de la etiqueta, el panel funciona ahora. Con una foto de la tabla los completamos por vos.</p>
+      <button class="btn" id="b-datos-desde-fotos">Copiar los datos de la etiqueta</button>
+    </div>`}
     <button class="btn sec" data-volver="inicio">Volver</button>`;
 
   document.querySelectorAll("[data-volver]").forEach(b => b.onclick = () => mostrar("inicio"));
+  const bdf = document.getElementById("b-datos-desde-fotos");
+  if (bdf) bdf.onclick = () => pintarFormularioDatos(
+    (actual && actual.codigo === codigo) ? actual : { codigo, nombre:"", nutri:{ liquido:false } });
 
   if (!sinRed){
     RANURAS.forEach(r => {
