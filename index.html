@@ -894,6 +894,14 @@ function pintarFormularioDatos(p){
       <div class="num" style="font-size:13px;color:var(--tinta-suave);margin-top:4px">${agrupar(p.codigo)}</div>
       <p style="font-size:15px">Buscá en el envase la columna que dice <strong>cada 100 ${ml?"ml":"g"}</strong>,
       no la de la porción. Si algún dato no está, dejalo vacío.</p>
+      <div class="tarjeta plana" style="border-color:var(--tinta)">
+        <h3>Sacale una foto a la tabla</h3>
+        <p style="font-size:15px;margin-top:6px">La letra de los envases es chica a propósito.
+        Sacá una foto de la tabla nutricional y completamos los campos por vos. Después los revisás.</p>
+        <button class="btn sec" id="b-foto-tabla">Sacar foto de la tabla</button>
+        <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" id="archivo-tabla" class="oculto">
+        <div id="lectura-estado" style="font-size:14px;margin-top:10px"></div>
+      </div>
       <label class="campo" for="base">Los valores que vas a cargar son</label>
       <select id="base">
         <option value="100g" ${ml?"":"selected"}>Cada 100 g (sólido)</option>
@@ -913,7 +921,63 @@ function pintarFormularioDatos(p){
 
   document.querySelectorAll("[data-volver]").forEach(b=>b.onclick=()=>mostrar("inicio"));
   $("#b-guardar-datos").onclick = () => guardarDatos(p);
+  $("#b-foto-tabla").onclick = () => $("#archivo-tabla").click();
+  $("#archivo-tabla").onchange = () => leerEtiqueta($("#archivo-tabla").files[0]);
   mostrar("datos");
+}
+
+/* La IA transcribe, el código convierte, la persona confirma.
+   Ningún número llega al formulario sin que se vea de dónde salió. */
+async function leerEtiqueta(archivo){
+  if (!archivo) return;
+  const estado = $("#lectura-estado");
+  const boton = $("#b-foto-tabla");
+  estado.innerHTML = "Preparando la foto…";
+  let dataURL;
+  try{ dataURL = await comprimir(archivo); }
+  catch(e){ estado.innerHTML = `<span class="r">${e.message}</span>`; return; }
+  const kb = pesoKB(dataURL);
+  if (kb < 25){ estado.innerHTML = `<span class="r">Salió casi vacía (${kb} KB). ¿Estaba tapado el lente?</span>`; return; }
+
+  boton.disabled = true; boton.textContent = "Leyendo…";
+  estado.innerHTML = "Leyendo la etiqueta. Puede tardar unos segundos.";
+  try{
+    const r = await fetch("/api/leer-etiqueta", {
+      method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ imagen: dataURL })
+    });
+    const d = await r.json().catch(()=>({}));
+
+    if (r.status === 503){
+      estado.innerHTML = `<span class="a">${d.mensaje || "La lectura automática no está disponible."}</span>`;
+    } else if (!r.ok || d.ok === false){
+      estado.innerHTML = `<span class="r">${d.mensaje || d.error || "No pudimos leer la etiqueta."} Cargá los datos a mano.</span>`;
+    } else {
+      /* Base primero: si la etiqueta venía por porción, el selector tiene
+         que quedar en lo que corresponde antes de cargar los números. */
+      if (d.base) $("#base").value = d.base;
+      let puestos = 0, dudosos = [];
+      for (const c of CAMPOS_ETIQUETA){
+        const info = d.campos && d.campos[c.id];
+        const campo = $("#c-" + c.id);
+        if (info && typeof info.valor === "number"){
+          campo.value = String(info.valor).replace(".", ",");
+          puestos++;
+          if (info.confianza !== "alta") dudosos.push(c.texto);
+        }
+      }
+      const partes = [];
+      partes.push(`<strong>Completamos ${puestos} campo(s).</strong> Revisalos contra el envase antes de guardar.`);
+      if (d.conversion) partes.push(`<span style="color:var(--tinta-suave)">${d.conversion}</span>`);
+      if (dudosos.length) partes.push(`<span class="a">Revisá con atención: ${dudosos.join(", ")}. La lectura no fue clara.</span>`);
+      if (d.nota) partes.push(`<span style="color:var(--tinta-suave)">${d.nota}</span>`);
+      if (!puestos) partes.push(`<span class="r">No pudimos leer ningún valor. Probá con más luz o cargalos a mano.</span>`);
+      estado.innerHTML = partes.join("<br>");
+    }
+  }catch(e){
+    estado.innerHTML = `<span class="r">No hubo respuesta. Cargá los datos a mano.</span>`;
+  }
+  boton.disabled = false; boton.textContent = "Sacar otra foto";
 }
 
 async function guardarDatos(p){
