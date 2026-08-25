@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-label="Semáforo Nutricional">
+  <!-- La firma del proyecto: una barra con la marca del límite en el medio.
+       Verde por debajo, rojo cuando lo pasa. -->
+  <rect width="512" height="512" rx="96" fill="#EDF1F2"/>
+
+  <g transform="translate(64 150)">
+    <rect x="0" y="0" width="384" height="84" rx="18" fill="#FFFFFF" stroke="#12181C" stroke-width="14"/>
+    <rect x="7" y="7" width="150" height="70" rx="12" fill="#1B7F4B"/>
+    <rect x="185" y="-14" width="14" height="112" fill="#12181C"/>
+  </g>
+
+  <g transform="translate(64 280)">
+    <rect x="0" y="0" width="384" height="84" rx="18" fill="#FFFFFF" stroke="#12181C" stroke-width="14"/>
+    <rect x="7" y="7" width="300" height="70" rx="12" fill="#C2331F"/>
+    <rect x="185" y="-14" width="14" height="112" fill="#12181C"/>
+  </g>
+</svg>
