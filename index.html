@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#12181C">
+<link rel="manifest" href="/manifest.json">
+<link rel="icon" href="/icono.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="/icono.svg">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Semáforo">
 <title>Semáforo Nutricional</title>
 <style>
   :root{
@@ -1459,6 +1464,21 @@ $("#b-volver-panel").onclick = () => mostrar("panel");
 document.querySelectorAll("[data-volver='inicio']").forEach(b => b.onclick = () => mostrar("inicio"));
 
 mostrar("inicio");
+
+/* El service worker pide siempre a la red primero: la caché es red de
+   emergencia para que la app abra sin internet, nunca la fuente. Si hay
+   una versión nueva, se toma sola y la página se recarga una vez. */
+if ("serviceWorker" in navigator){
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").catch(()=>{});
+    let recargado = false;
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (recargado) return;
+      recargado = true;
+      location.reload();
+    });
+  });
+}
 </script>
 </body>
 </html>
