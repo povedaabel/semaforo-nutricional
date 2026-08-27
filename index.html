@@ -834,6 +834,9 @@ function pintarComparacion(criterio){
       const f = filas.find(x=>x.id===id);
       if (!f || f.estado==="sin-dato") return `<span class="g">–</span>`;
       if (f.estado==="inconsistente") return `<span class="g">!</span>`;
+      /* Cero declarado: es un dato, no un hueco. Sin esta línea la tabla
+         intentaba redondear un porcentaje inexistente y mostraba NaN. */
+      if (f.estado==="cero") return `<span class="v">0%</span>`;
       if (f.estado==="techo" && !f.concluyente) return `<span class="g">?</span>`;
       return `<span class="${f.color}">${f.estado==="techo"?"≤":""}${Math.round(f.pct)}%</span>`;
     }).join("");
